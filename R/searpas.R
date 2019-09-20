@@ -1,16 +1,18 @@
 
 
-searpas <- function(vw,step,b,delta,funcpa,res.out.error){
-
-	goto50  <- function(step,vlw2,fi1,fi2,fi3,b,delta,funcpa){
+searpas <- function(vw,step,b,delta,funcpa,res.out.error,...){
+    #cat("dans searpas, b=",b,"\n")
+    #cat("              vw=",vw,"\n")
+    #cat("              delta=",delta,"\n")
+	goto50  <- function(step,vlw2,fi1,fi2,fi3,b,delta,funcpa,...){
 		vm <- vlw2-(step*(fi1-fi3))/(2*(fi1-2*fi2+fi3)) 
-		fim <- valfpa(vm,b,delta,funcpa)
+		fim <- valfpa(vm,b,delta,funcpa,...)
 		return(list(vm=vm,fim=fim))
 	}
 	vlw1 <- log(vw)
 	vlw2 <- vlw1+step
-	fi1 <- valfpa(vlw1,b,delta,funcpa)
-	fi2 <- valfpa(vlw2,b,delta,funcpa)
+	fi1 <- valfpa(vlw1,b,delta,funcpa,...)
+	fi2 <- valfpa(vlw2,b,delta,funcpa,...)
 	
 	if((sum(!is.finite(fi1)) > 0) || (sum(!is.finite(fi2)) > 0)){
 		cat("Probably too much accuracy requested...\n")
@@ -30,8 +32,8 @@ searpas <- function(vw,step,b,delta,funcpa,res.out.error){
 		fi2 <- fi1
 		step <- -step
 		vlw1 <- vlw2+step
-		fi1 <- valfpa(vlw1,b,delta,funcpa)
-		gt50 <- goto50(step,vlw2,fi1,fi2,fi3,b,delta,funcpa)
+		fi1 <- valfpa(vlw1,b,delta,funcpa,...)
+		gt50 <- goto50(step,vlw2,fi1,fi2,fi3,b,delta,funcpa,...)
 		vm <- gt50$vm
 		fim <- gt50$fim
 		if(is.na(fim)) fim <- 10E10
@@ -57,9 +59,9 @@ searpas <- function(vw,step,b,delta,funcpa,res.out.error){
 			fi3 <- fi2
 			fi2 < fi1
 			vlw1=vlw2+step
-			fi1 <- valfpa(vlw1,b,delta,funcpa)
+			fi1 <- valfpa(vlw1,b,delta,funcpa,...)
 			if(fi1 > fi2){
-				gt50 <- goto50(step,vlw2,fi1,fi2,fi3,b,delta,funcpa) 
+				gt50 <- goto50(step,vlw2,fi1,fi2,fi3,b,delta,funcpa,...) 
 				out <- 1
 				break
 			}

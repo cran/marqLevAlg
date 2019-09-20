@@ -1,3 +1,4 @@
+#' @export
 print.marqLevAlg <- function(x,digits=8,...){
 if (!inherits(x, "marqLevAlg")) stop("use only with \"marqLevAlg\" objects")
 
@@ -24,8 +25,10 @@ indice <- rep(id*(id+1)/2)
 se <-sqrt(x$v[indice])
 wald <- (x$b/se)**2
 z <- abs(qnorm((1 + .95)/2))
+binf <- x$b-1.96*se
+bsup <- x$b+1.96*se
 
-tmp <- data.frame("coef"=format(round(x$b,digits)),"SE coef"=format(round(se,digits)),"Wald"=format(wald,4),"P-value"=format.pval(1 - pchisq(wald, 1),digits=digits,eps=0.0001))
+tmp <- data.frame("coef"=format(round(x$b,3)),"SE coef"=format(round(se,3)),"Wald"=format(wald,4),"P-value"=round(1 - pchisq(wald, 1),5),"binf"=round(binf,3),"bsup"=round(bsup,3))
 print(tmp,row.names=F)
 cat(" \n")
 cat("Number of iterations: ", x$ni, "\n")
@@ -40,7 +43,7 @@ if (x$ier == -1){
 cat("                    : relative distance to maximum(RDM)=", round(x$rdm,digits), "\n")
 cat(" \n")
 cat("Goodness-of-fit statistics:", "\n")
-cat("      minimum log-likelihood:", round(x$fn.value,digits)," \n")
+cat("      maximum log-likelihood:", round(x$fn.value,digits)," \n")
 cat(" \n")
 cat(" \n")
 cat(" \n")
