@@ -3,7 +3,7 @@
 \name{marqLevAlg}
 \alias{marqLevAlg}
 \alias{mla}
-\title{An algorithm for least-squares curve fitting.}
+\title{A parallelized general-purpose optimization based on Marquardt-Levenberg algorithm}
 \usage{
 marqLevAlg(b, m = FALSE, fn, gr = NULL, hess = NULL, maxiter = 500,
   epsa = 0.001, epsb = 0.001, epsd = 0.01, digits = 8,
@@ -38,7 +38,7 @@ iterative algorithm. Default is 500.}
 parameter stability. Default is 0.001.}
 
 \item{epsb}{optional threshold for the convergence criterion based on the
-log-likelihood stability. Default is 0.001.}
+objective function stability. Default is 0.001.}
 
 \item{epsd}{optional threshold for the relative distance to maximum. This
 criterion has the nice interpretation of estimating the ratio of the
@@ -97,7 +97,7 @@ rule is when the gradients are small enough in the parameters metric
 }
 \details{
 Convergence criteria are very strict as they are based on derivatives of the
-log-likelihood in addition to the parameter and log-likelihood stability. In
+objective function in addition to the parameter and objective function stability. In
 some cases, the program may not converge and reach the maximum number of
 iterations fixed at 500.  In this case, the user should check that parameter
 estimates at the last iteration are not on the boundaries of the parameter
@@ -153,6 +153,31 @@ microbenchmark::microbenchmark(mla(b=b, fn=f2, minimize=FALSE),
                               times=10)
         }
 
+
+\dontrun{
+### example 3 : a linear mixed model
+## the log-likelihood is implemented in the loglikLMM function
+## the gradient is implemented in the gradLMM function
+
+## data
+Y <- dataEx$Y
+X <- as.matrix(cbind(1,dataEx[,c("t","X1","X3")],dataEx$t*dataEx$X1))
+ni <- as.numeric(table(dataEx$i))
+
+## initial values
+binit <- c(0,0,0,0,0,1,1)
+
+## estimation in sequential mode, with numeric derivatives
+estim <- marqLevAlg(b=binit, fn=loglikLMM, minimize=FALSE, X=X, Y=Y, ni=ni)
+## estimation in parallel mode, with numeric derivatives
+estim2 <- marqLevAlg(b=binit, fn=loglikLMM, minimize=FALSE, X=X, Y=Y, ni=ni, 
+nproc=2, clustertype="FORK")
+## estimation in sequential mode, with analytic gradient
+estim3 <- marqLevAlg(b=binit, fn=loglikLMM, gr=gradLMM, minimize=FALSE, X=X, Y=Y, ni=ni)
+## estimation in parallel mode, with analytic gradient
+estim4 <- marqLevAlg(b=binit, fn=loglikLMM, gr=gradLMM, minimize=FALSE, X=X, Y=Y, ni=ni, 
+nproc=2, clustertype="FORK")
+}
 }
 \references{
 \emph{marqLevAlg Algorithm}
