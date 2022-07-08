@@ -66,9 +66,11 @@
 #' \item{ni}{ number of marqLevAlg iterations before reaching stopping
 #' criterion.  } \item{istop}{ status of convergence: =1 if the convergence
 #' criteria were satisfied, =2 if the maximum number of iterations was reached,
+#' =3 if convergence criteria with partial Hessian matrix were satisfied,
 #' =4 if the algorithm encountered a problem in the function computation.  }
-#' \item{v}{ vector containing the upper triangle matrix of variance-covariance
-#' estimates at the stopping point.  } \item{grad}{vector containing the gradient
+#' \item{v}{if istop=1 or istop=3, vector containing the upper triangle matrix of variance-covariance
+#' estimates at the stopping point. Otherwise v contains the second derivatives
+#' of the fn function with respect to the parameters.} \item{grad}{vector containing the gradient
 #' at the stopping point.} \item{fn.value}{ function evaluation at
 #' the stopping point.  } \item{b}{ stopping point value.  } \item{ca}{
 #' convergence criteria for parameters stabilisation.  } \item{cb}{ convergence
@@ -182,10 +184,10 @@ marqLevAlg <- function(b,m=FALSE,fn,gr=NULL,hess=NULL,maxiter=500,epsa=0.0001,ep
         
         if(nproc>1){
             if(is.null(clustertype)){
-                clustpar <- parallel::makeCluster(nproc, outfile="")
+                clustpar <- parallel::makeCluster(nproc)#, outfile="")
             }
             else{
-                clustpar <- parallel::makeCluster(nproc, type=clustertype, outfile="")
+                clustpar <- parallel::makeCluster(nproc, type=clustertype)#, outfile="")
             }
             
             doParallel::registerDoParallel(clustpar)
@@ -204,8 +206,6 @@ marqLevAlg <- function(b,m=FALSE,fn,gr=NULL,hess=NULL,maxiter=500,epsa=0.0001,ep
 
 	flush.console()
 	ptm <- proc.time()
-	#cat("\n")
-	#cat("Be patient. The program is computing ...\n")
 	
 ###initialisation
 	binit <- b
@@ -241,14 +241,17 @@ marqLevAlg <- function(b,m=FALSE,fn,gr=NULL,hess=NULL,maxiter=500,epsa=0.0001,ep
 	
 		if (sum(!is.finite(b))>0){
 
-			cat("Probably too much accuracy requested...\n")
-			cat("Last step values :\n")
-			cat("      b :",round(old.b,digits),"\n")
-			cat("      objective function :",round(-old.rl,digits),"\n")
-			cat("      Convergence criteria: parameters stability=", round(old.ca,digits), "\n")
-			cat("                          : function stability=", round(old.cb,digits), "\n") 
-			cat("                          : best relative distance to maximum obtained (RDM)=", round(old.dd,digits), "\n")
-			stop("")
+                    cat("Infinite parameters...\n")
+                    cat("Last step values :\n")
+                    cat("      b :",round(old.b,digits),"\n")
+                    if(minimize){cat("      objective function :",round(-old.rl,digits),"\n")
+                    } else {cat("      objective function :",round(old.rl,digits),"\n")}
+                    cat("      Convergence criteria: parameters stability=", round(old.ca,digits), "\n")
+                    cat("                          : function stability=", round(old.cb,digits), "\n") 
+                    cat("                          : best relative distance to maximum obtained (RDM)=", round(old.dd,digits), "\n")
+                    istop <- 4
+                    rl <- -1.e9
+                    break
 			 
 		}
 		res.out.error <- list("old.b"=round(old.b,digits),"old.rl"=round(old.rl,digits),"old.ca"=round(old.ca,digits),"old.cb"=round(old.cb,digits),"old.dd"=round(old.dd,digits))
@@ -287,16 +290,17 @@ marqLevAlg <- function(b,m=FALSE,fn,gr=NULL,hess=NULL,maxiter=500,epsa=0.0001,ep
 		if((sum(is.finite(b))==m) && !is.finite(rl)){
 			cat("Problem of computation. Verify your function specification...\n")
 			cat("Infinite value with finite parameters : b=",round(old.b,digits),"\n")
-		##	cat("      - Check the computation and the continuity,\n")
-		##  	cat("      - Check that you minimize the function.\n")
-			stop("")
-		
+                        istop <- 4
+                        rl <- -1.e9
+                        break
 		}
 
 		if(((sum(!is.finite(b)) > 0) || (sum(!is.finite(rl)) > 0)) && (ni==0)){
 			cat("Problem of computation. Verify your function specification...\n")
-			cat("First check b length in parameters specification.\n")
-			stop("")
+			cat("Infinite value or parameters\n")
+			istop <- 4
+                        rl <- -1.e9
+                        break
 		}
 		rl1 <- rl      
 		dd <- 0 
@@ -311,11 +315,10 @@ marqLevAlg <- function(b,m=FALSE,fn,gr=NULL,hess=NULL,maxiter=500,epsa=0.0001,ep
 	
 		dsinv <- .Fortran(C_dsinv,fu.out=as.double(fu.int),as.integer(m),as.double(ep),ier=as.integer(0),det=as.double(0))
 				
-		ier <- dsinv$ier
-		fu[1:(m*(m+1)/2)] <- dsinv$fu.out
+                ier <- dsinv$ier
+                fu[1:(m*(m+1)/2)] <- dsinv$fu.out
 		if (ier == -1){
 			dd <- epsd+1 
-			v_tmp <- v[(m*(m+1)/2+1):(m*(m+3)/2)]
 		}else{
 			dd <- ghg(m,v,fu)$ghg/m
                         if(is.na(dd)) dd <- epsd+1
@@ -329,11 +332,7 @@ marqLevAlg <- function(b,m=FALSE,fn,gr=NULL,hess=NULL,maxiter=500,epsa=0.0001,ep
 		cat("                    : relative distance to maximum(RDM)=", round(dd,digits), "\n",file=file,append=TRUE)
 
 		nom.par <- paste("parameter",c(1:m),sep="")
-		id <- 1:m
-		indice <- rep(id*(id+1)/2)
-		Var <- fu[indice]
-		SE <- sqrt(abs(Var))
-		res.info <- data.frame("coef"=round(b,digits),"SE.coef"=round(SE,digits),"Var.coef"=round(Var,digits))
+		res.info <- data.frame("coef"=round(b,digits))
 		rownames(res.info) <- nom.par
                 if(file=="") print(res.info)
                 else write.table(res.info,file=file,append=TRUE)
@@ -460,15 +459,18 @@ marqLevAlg <- function(b,m=FALSE,fn,gr=NULL,hess=NULL,maxiter=500,epsa=0.0001,ep
 		
 		if(blinding){
 			if(is.na(rl)){
-				cat("rl :",rl,"\n")
+				if(minimize)  cat("rl :",-rl,"\n") else cat("rl :",rl,"\n")
 				rl <- -500000
 			}
 		}else{
 			if(is.na(rl)){
 				cat(" Numerical problem by computing fn \n")
-				cat("          value of function is :",round(-rl,digits),"\n")
-				
+				if(minimize) {cat("          value of function is :",round(-rl,digits),"\n")
+                                }else{
+                                    cat("          value of function is :",round(rl,digits),"\n")
+				}
 				istop <- 4
+                                rl <- -1.e9
 				break
 			}
 		}

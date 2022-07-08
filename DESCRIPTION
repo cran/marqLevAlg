@@ -2,13 +2,13 @@ Package: marqLevAlg
 Type: Package
 Title: A Parallelized General-Purpose Optimization Based on
         Marquardt-Levenberg Algorithm
-Version: 2.0.6
-Date: 2022-03-08
+Version: 2.0.7
+Date: 2022-07-08
 Author: Viviane Philipps, Cecile Proust-Lima, Melanie Prague, Boris Hejblum, Daniel Commenges, Amadou Diakite
 Maintainer: Viviane Philipps <viviane.philipps@u-bordeaux.fr>
 Depends: R (>= 3.5.0)
 Suggests:
-        microbenchmark,knitr,rmarkdown,rticles,ggplot2,viridis,patchwork,xtable
+        microbenchmark,knitr,rmarkdown,ggplot2,viridis,patchwork,xtable
 LazyLoad: yes
 LazyData: true
 Description: This algorithm provides a numerical solution to the
@@ -21,6 +21,6 @@ Imports: doParallel, foreach
 VignetteBuilder: knitr
 NeedsCompilation: yes
 RoxygenNote: 7.1.1
-Packaged: 2022-03-09 11:56:55 UTC; vp3
+Packaged: 2022-07-08 10:46:14 UTC; vp3
 Repository: CRAN
-Date/Publication: 2022-03-09 15:20:07 UTC
+Date/Publication: 2022-07-08 12:10:02 UTC
